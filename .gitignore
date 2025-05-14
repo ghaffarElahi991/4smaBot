@@ -1,0 +1,5 @@
+# Ignore the virtual environment folder
+python/myenv/
+
+# Ignore all __pycache__ directories in any folder
+**/__pycache__/

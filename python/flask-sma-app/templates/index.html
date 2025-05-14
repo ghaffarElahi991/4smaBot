@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trades Dashboard</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+</head>
+<body>
+  <!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">CryptoBot</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+      aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Dashboard</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/">Open Trades</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/history">Closed Trades</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="/settings">Settings</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+  <div class="container my-4">
+    <h1 class="mb-4">CryptoBot Trades Dashboard</h1>
+    <table id="tradesTable" class="table table-striped table-bordered table-hover">
+      <thead class="table-dark">
+        <tr>
+          <th>Trade ID</th>
+          <th>Side</th>
+          <th>Instrument</th>
+          <th>Exchange</th>
+          <th>Entry Price</th>
+          <th>Exit Price</th>
+          <th>Quantity</th>
+          <th>PNL</th>
+          <th>Status</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Example static rows; replace or populate dynamically -->
+        <tr>
+          <td>1</td>
+          <td class="text-success">BUY</td>
+          <td>BTCUSD-PERP</td>
+          <td>Crypto.com</td>
+          <td>30000.50</td>
+          <td>30015.50</td>
+          <td>0.10</td>
+          <td>+15.00</td>
+          <td><span class="badge bg-success">Closed</span></td>
+          <td>2025-04-25 10:15:00</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td class="text-danger">SELL</td>
+          <td>ETHUSD-PERP</td>
+          <td>Binance</td>
+          <td>1800.00</td>
+          <td>1795.00</td>
+          <td>1.00</td>
+          <td>-5.00</td>
+          <td><span class="badge bg-danger">Closed</span></td>
+          <td>2025-04-25 10:20:00</td>
+        </tr>
+        <!-- Add more rows here -->
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="7" class="text-end">Total PNL:</th>
+          <th colspan="3">+10.00</th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- DataTables JS -->
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+  <script>
+    $(document).ready(function() {
+      // Initialize empty DataTable
+      var table = $('#tradesTable').DataTable({
+        paging: true,
+        pageLength: 10,
+        lengthMenu: [5, 10, 25, 50],
+        ordering: true,
+        order: [[9, "desc"]], // Timestamp descending
+        searching: true,
+        footerCallback: function ( row, data, start, end, display ) {
+          var api = this.api();
+          var total = api
+            .column(7, { page: 'current'} )
+            .data()
+            .reduce( function (a, b) {
+              return parseFloat(a) + parseFloat(b);
+            }, 0 );
+          $(api.table().footer()).find('th').eq(7).html(total.toFixed(2));
+        }
+      });
+    
+      // Fetch trades from API and populate table
+      fetch('/api/v1/orders?status=OPEN')  // <--- your API route here
+        .then(response => response.json())
+        .then(data => {
+          table.clear();  // Clear any existing rows
+    
+          data.forEach(trade => {
+            table.row.add([
+              trade.id,
+              trade.side === "SELL" ? '<span class="text-danger">SELL</span>' : '<span class="text-success">BUY</span>',
+              trade.instrument_name,
+              trade.exchange,
+              trade.entry_price.toFixed(2),
+              trade.exit_price !== null ? trade.exit_price.toFixed(2) : '-',
+              trade.quantity.toFixed(4),
+              trade.pnl !== null ? trade.pnl.toFixed(2) : '0.00',
+              `<span class="badge bg-${trade.status === "OPEN" ? 'warning' : 'success'}">${trade.status}</span>`,
+              new Date(trade.created_at).toLocaleString()
+            ]);
+          });
+    
+          table.draw();  // Redraw the table with new data
+        })
+        .catch(error => console.error('Error fetching trades:', error));
+    });
+    </script>
+    
+</body>
+</html>

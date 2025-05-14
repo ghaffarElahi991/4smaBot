@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings - CryptoBot</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    #loadingSpinner {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">CryptoBot</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+      aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+
+        <li class="nav-item">
+          <a class="nav-link" href="/">Open Trades</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/history">Closed Trades</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="/settings">Settings</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container my-5">
+  <h2 class="mb-4">Bot Settings</h2>
+
+  <div id="loadingSpinner" class="text-center my-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <div id="settingsForm" style="display:none;">
+
+    <div class="row mb-3 align-items-center">
+      <div class="col-md-4">
+        <label for="profitPercentage" class="form-label">Profit Percentage (%)</label>
+        <input type="number" class="form-control" id="profitPercentage" step="0.01" placeholder="e.g. 2.5">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100 mt-4" onclick="updateSetting('profit_percentage')">Update</button>
+      </div>
+    </div>
+
+    <div class="row mb-3 align-items-center">
+      <div class="col-md-4">
+        <label for="stoplossPercentage" class="form-label">Stoploss Percentage (%)</label>
+        <input type="number" class="form-control" id="stoplossPercentage" step="0.01" placeholder="e.g. 1.5">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100 mt-4" onclick="updateSetting('stoploss_percentage')">Update</button>
+      </div>
+    </div>
+
+    <div class="row mb-3 align-items-center">
+      <div class="col-md-4">
+        <label for="investmentAmount" class="form-label">Investment Amount ($)</label>
+        <input type="number" class="form-control" id="investmentAmount" step="0.01" placeholder="e.g. 100">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100 mt-4" onclick="updateSetting('investment_amount')">Update</button>
+      </div>
+    </div>
+
+    <div class="row mb-3 align-items-center">
+      <div class="col-md-4">
+        <label for="maxOpenTrades" class="form-label">Max Open Trades</label>
+        <input type="number" class="form-control" id="maxOpenTrades" step="1" placeholder="e.g. 5">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100 mt-4" onclick="updateSetting('max_open_trades')">Update</button>
+      </div>
+    </div>
+
+    <div class="row mb-3 align-items-center">
+      <div class="col-md-4">
+        <label for="leverage" class="form-label">Leverage</label>
+        <input type="number" class="form-control" id="leverage" step="1" placeholder="e.g. 10">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100 mt-4" onclick="updateSetting('leverage')">Update</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="saveStatus" class="mt-4"></div>
+
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+<script>
+// Frontend key to backend Redis key mapping
+const keyMapping = {
+  'profit_percentage': 'profit',
+  'stoploss_percentage': 'stoploss',
+  'investment_amount': 'investment_amount',
+  'max_open_trades': 'max_open_trades',
+  'leverage': 'leverage'
+};
+
+// Function to update a single setting
+function updateSetting(settingKey) {
+  let value;
+  switch(settingKey) {
+    case 'profit_percentage':
+      value = parseFloat($('#profitPercentage').val());
+      break;
+    case 'stoploss_percentage':
+      value = parseFloat($('#stoplossPercentage').val());
+      break;
+    case 'investment_amount':
+      value = parseFloat($('#investmentAmount').val());
+      break;
+    case 'max_open_trades':
+      value = parseInt($('#maxOpenTrades').val());
+      break;
+    case 'leverage':
+      value = parseInt($('#leverage').val());
+      break;
+    default:
+      console.error('Unknown setting:', settingKey);
+      return;
+  }
+
+  if (isNaN(value)) {
+    $('#saveStatus').html('<div class="alert alert-warning">⚠️ Please enter a valid number for ' + settingKey.replace('_', ' ') + '</div>');
+    return;
+  }
+
+  const backendKey = keyMapping[settingKey];
+
+  fetch('/api/v1/settings/update', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ key: backendKey, value: value }),
+  })
+  .then(response => response.json())
+  .then(data => {
+    $('#saveStatus').html('<div class="alert alert-success">✅ ' + settingKey.replace('_', ' ') + ' updated successfully!</div>');
+  })
+  .catch(error => {
+    console.error('Error updating setting:', error);
+    $('#saveStatus').html('<div class="alert alert-danger">❌ Failed to update ' + settingKey.replace('_', ' ') + '.</div>');
+  });
+}
+
+// Function to load all settings on page load
+function loadSettings() {
+  $('#loadingSpinner').show();
+  $('#settingsForm').hide();
+
+  fetch('/api/v1/settings')
+    .then(response => response.json())
+    .then(data => {
+      $('#profitPercentage').val(data.profit || '');
+      $('#stoplossPercentage').val(data.stoploss || '');
+      $('#investmentAmount').val(data.investment_amount || '');
+      $('#maxOpenTrades').val(data.max_open_trades || '');
+      $('#leverage').val(data.leverage || '');
+
+      $('#loadingSpinner').hide();
+      $('#settingsForm').show();
+    })
+    .catch(error => {
+      console.error('Error fetching settings:', error);
+      $('#saveStatus').html('<div class="alert alert-danger">❌ Failed to load settings.</div>');
+      $('#loadingSpinner').hide();
+    });
+}
+
+// On page ready
+$(document).ready(function() {
+  loadSettings();
+});
+</script>
+
+</body>
+</html>
